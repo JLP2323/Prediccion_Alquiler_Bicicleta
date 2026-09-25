@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VeloPredict Analytics – Predicción de Demanda de Bicicletas</title>
+  <meta name="description" content="Plataforma analítica de predicción de demanda de bicicletas compartidas. Visualiza patrones horarios, impacto climático y simula predicciones en tiempo real." />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:  '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'fade-in': 'fadeIn 0.5s ease-in-out',
+            'slide-up': 'slideUp 0.4s ease-out',
+            'count-up': 'countUp 0.8s ease-out',
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 99px; }
+
+    /* Gradient background */
+    .app-bg {
+      background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 50%, #f0f9ff 100%);
+      min-height: 100vh;
+    }
+
+    /* Glassmorphism cards */
+    .glass-card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+      transition: all 0.25s ease;
+    }
+    .glass-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); transform: translateY(-1px); }
+
+    /* Pulse dot animation */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.9); opacity: 1; }
+      70% { transform: scale(1.4); opacity: 0; }
+      100% { transform: scale(0.9); opacity: 0; }
+    }
+    .pulse-dot::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse-ring 2s ease-out infinite;
+    }
+
+    /* Skeleton shimmer */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 8px;
+    }
+
+    /* Custom slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 99px;
+      background: #e2e8f0;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #059669;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.4);
+      transition: transform 0.15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    input[type=range]::-moz-range-thumb {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #059669;
+      cursor: pointer;
+      border: 2px solid white;
+    }
+
+    /* Animated number */
+    .kpi-number { transition: all 0.4s ease; }
+
+    /* Chart container */
+    .chart-wrap { position: relative; width: 100%; }
+
+    /* Weather buttons */
+    .weather-btn { transition: all 0.2s ease; }
+    .weather-btn.active {
+      background: #059669;
+      color: white;
+      border-color: #059669;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    }
+
+    /* Day type buttons */
+    .daytype-btn { transition: all 0.2s ease; cursor: pointer; }
+    .daytype-btn.active {
+      background: linear-gradient(135deg, #059669, #0891b2);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35);
+    }
+
+    /* Result card pulse */
+    @keyframes resultPop {
+      0% { transform: scale(0.96); opacity: 0.6; }
+      60% { transform: scale(1.02); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .result-pop { animation: resultPop 0.45s ease-out; }
+
+    /* Demand badge */
+    .demand-low    { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .demand-mid    { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .demand-high   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* Spin loader */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.8s linear infinite; }
+
+    /* Tabs */
+    .tab-btn { transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: #059669; border-bottom-color: #059669; }
+
+    /* Nav scroll */
+    nav { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  </style>
+</head>
+
+<body class="app-bg text-slate-800">
+
+  <!-- ══════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════ -->
+  <nav class="sticky top-0 z-50 bg-white/80 border-b border-slate-200/80 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center shadow-md">
+          <i data-lucide="bike" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <span class="text-slate-900 font-bold text-lg leading-none">VeloPredict</span>
+          <span class="text-emerald-600 font-semibold text-lg leading-none"> Analytics</span>
+        </div>
+      </div>
+
+      <!-- Center badges -->
+      <div class="hidden md:flex items-center gap-4">
+        <!-- Status badge -->
+        <div id="statusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium border border-slate-200">
+          <span class="w-2 h-2 rounded-full bg-slate-300 inline-block"></span>
+          <span>Cargando modelo…</span>
+        </div>
+        <!-- Model quality badge -->
+        <div id="r2Badge" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
+          <i data-lucide="brain-circuit" class="w-3.5 h-3.5"></i>
+          <span>RandomForest · R²=<span id="r2Value">–</span></span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3">
+        <a href="/docs" target="_blank"
+           class="hidden sm:flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-emerald-600 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-50">
+          <i data-lucide="code-2" class="w-3.5 h-3.5"></i>
+          API Docs
+        </a>
+        <button onclick="loadData()" id="refreshBtn"
+                class="flex items-center gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          Actualizar
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════ -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- PAGE HEADER -->
+    <div class="animate-fade-in">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        Panel de Control · Bike Sharing
+      </h1>
+      <p class="text-slate-500 mt-1 text-sm">
+        Análisis histórico del dataset <code class="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">hour.csv</code> · 17,379 registros horarios
+      </p>
+    </div>
+
+    <!-- ────────────────────────────────────
+         KPI CARDS
+    ──────────────────────────────────── -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- KPI 1: Total rentals -->
+      <div class="glass-card rounded-2xl p-5 animate-slide-up" style="animation-delay:0ms">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Total Alquileres</p>
+            <p id="kpiTotal" class="kpi-number text-3xl font-extrabold text-slate-900 mt-1.5">
+              <span class="skeleton h-9 w-28 block"></span>
+            </p>
+            <p class="text-xs text-slate-500 mt-1">registros históricos</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+            <i data-lucide="bike" class="w-5 h-5 text-emerald-600"></i>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+          <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+          <span>2011 – 2012</span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Avg hourly -->
+      <div class="glass-card rounded-2xl p-5 animate-slide-up" style="animation-delay:60ms">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Promedio Horario</p>
+            <p id="kpiAvg" class="kpi-number text-3xl font-extrabold text-slate-900 mt-1.5">
+              <span class="skeleton h-9 w-20 block"></span>
+            </p>
+            <p class="text-xs text-slate-500 mt-1">bicicletas / hora</p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
+            <i data-lucide="clock" class="w-5 h-5 text-sky-500"></i>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-1.5 text-xs font-medium text-sky-500">
+          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+          <span>Todas las horas</span>
+        </div>
+      </div>
+
+      <!-- KPI 3: User distribution -->
+      <div class="glass-card rounded-2xl p-5 animate-slide-up" style="animation-delay:120ms">
+        <div class="flex items-start justify-between">
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Distribución Usuarios</p>
+            <div class="mt-2 flex items-end gap-2">
+              <span id="kpiCasualPct" class="text-3xl font-extrabold text-amber-500">
+                <span class="skeleton h-9 w-16 block"></span>
+              </span>
+              <span class="text-sm text-slate-400 mb-1">casual</span>
+            </div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+            <i data-lucide="users" class="w-5 h-5 text-amber-500"></i>
+          </div>
+        </div>
+        <!-- Pill bar -->
+        <div class="mt-3 h-2.5 rounded-full bg-slate-100 overflow-hidden flex">
+          <div id="casualBar" class="h-full bg-amber-400 rounded-full transition-all duration-700" style="width:0%"></div>
+          <div id="regBar" class="h-full bg-emerald-500 rounded-full flex-1 transition-all duration-700"></div>
+        </div>
+        <div class="mt-1.5 flex justify-between text-xs text-slate-400">
+          <span id="casualLbl">Casual</span>
+          <span id="regLbl">Registrado</span>
+        </div>
+      </div>
+
+      <!-- KPI 4: Temperature -->
+      <div class="glass-card rounded-2xl p-5 animate-slide-up" style="animation-delay:180ms">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Temperatura Promedio</p>
+            <p id="kpiTemp" class="kpi-number text-3xl font-extrabold text-slate-900 mt-1.5">
+              <span class="skeleton h-9 w-20 block"></span>
+            </p>
+            <p id="kpiAtemp" class="text-xs text-slate-500 mt-1">Sens. térmica: <span class="font-medium">–</span></p>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+            <i data-lucide="thermometer" class="w-5 h-5 text-rose-400"></i>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center gap-1.5 text-xs font-medium text-rose-400">
+          <i data-lucide="sun" class="w-3.5 h-3.5"></i>
+          <span>Rango completo del dataset</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ────────────────────────────────────
+         CHARTS – Tabs
+    ──────────────────────────────────── -->
+    <section class="glass-card rounded-2xl overflow-hidden animate-slide-up" style="animation-delay:240ms">
+      <!-- Tab bar -->
+      <div class="border-b border-slate-100 px-6 pt-4">
+        <div class="flex gap-1 -mb-px overflow-x-auto">
+          <button onclick="switchTab('hourly')" id="tab-hourly"
+                  class="tab-btn active text-sm font-semibold px-4 py-2.5 whitespace-nowrap text-slate-500">
+            <i data-lucide="clock-3" class="w-3.5 h-3.5 inline mr-1.5"></i>Patrón Horario
+          </button>
+          <button onclick="switchTab('weather')" id="tab-weather"
+                  class="tab-btn text-sm font-semibold px-4 py-2.5 whitespace-nowrap text-slate-500">
+            <i data-lucide="cloud-sun" class="w-3.5 h-3.5 inline mr-1.5"></i>Impacto Climático
+          </button>
+          <button onclick="switchTab('seasonal')" id="tab-seasonal"
+                  class="tab-btn text-sm font-semibold px-4 py-2.5 whitespace-nowrap text-slate-500">
+            <i data-lucide="calendar-range" class="w-3.5 h-3.5 inline mr-1.5"></i>Estacionalidad
+          </button>
+        </div>
+      </div>
+
+      <!-- Chart panels -->
+      <div class="p-6">
+        <!-- Hourly panel -->
+        <div id="panel-hourly" class="chart-panel">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-slate-800">Patrón de Demanda Horaria</h2>
+              <p class="text-xs text-slate-400 mt-0.5">Promedio de bicicletas alquiladas por hora · Laborables vs Fines de semana</p>
+            </div>
+            <div class="flex gap-3 text-xs">
+              <span class="flex items-center gap-1.5 text-slate-500">
+                <span class="w-3 h-1 rounded bg-emerald-500 inline-block"></span>Laborable
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-500">
+                <span class="w-3 h-1 rounded bg-sky-400 inline-block"></span>Fin de semana
+              </span>
+            </div>
+          </div>
+          <div class="chart-wrap h-72">
+            <canvas id="hourlyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Weather panel -->
+        <div id="panel-weather" class="chart-panel hidden">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-slate-800">Impacto de la Condición Climática</h2>
+              <p class="text-xs text-slate-400 mt-0.5">Promedio de demanda por tipo de clima registrado</p>
+            </div>
+          </div>
+          <div class="chart-wrap h-72">
+            <canvas id="weatherChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Seasonal panel -->
+        <div id="panel-seasonal" class="chart-panel hidden">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-slate-800">Estacionalidad Mensual y por Temporada</h2>
+              <p class="text-xs text-slate-400 mt-0.5">Evolución de la demanda a lo largo del año</p>
+            </div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="chart-wrap h-64"><canvas id="monthlyChart"></canvas></div>
+            <div class="chart-wrap h-64"><canvas id="seasonChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ────────────────────────────────────
+         SIMULATOR
+    ──────────────────────────────────── -->
+    <section class="animate-slide-up" style="animation-delay:300ms">
+      <div class="mb-4">
+        <h2 class="text-xl font-extrabold text-slate-900">Simulador de Predicción</h2>
+        <p class="text-slate-500 text-sm mt-0.5">Configura el contexto temporal y ambiental para predecir la demanda horaria.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+
+        <!-- LEFT: Temporal context -->
+        <div class="glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center gap-2 text-emerald-700">
+            <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+            <h3 class="font-semibold text-sm">Contexto Temporal</h3>
+          </div>
+
+          <!-- Hour slider -->
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-medium text-slate-700">Hora del día</label>
+              <span id="hrLabel" class="text-sm font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">5:00 PM</span>
+            </div>
+            <input id="sliderHr" type="range" min="0" max="23" value="17"
+                   class="w-full" oninput="updateHourLabel(this.value)">
+            <div class="flex justify-between text-xs text-slate-400 mt-1">
+              <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
+            </div>
+          </div>
+
+          <!-- Day type -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Tipo de día</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button id="dt-work" onclick="selectDayType('work')"
+                      class="daytype-btn active border border-slate-200 rounded-xl p-2.5 text-center">
+                <i data-lucide="briefcase" class="w-4 h-4 mx-auto mb-1 text-inherit"></i>
+                <span class="text-xs font-medium block">Laborable</span>
+              </button>
+              <button id="dt-weekend" onclick="selectDayType('weekend')"
+                      class="daytype-btn border border-slate-200 rounded-xl p-2.5 text-center text-slate-600">
+                <i data-lucide="coffee" class="w-4 h-4 mx-auto mb-1"></i>
+                <span class="text-xs font-medium block">Fin de semana</span>
+              </button>
+              <button id="dt-holiday" onclick="selectDayType('holiday')"
+                      class="daytype-btn border border-slate-200 rounded-xl p-2.5 text-center text-slate-600">
+                <i data-lucide="party-popper" class="w-4 h-4 mx-auto mb-1"></i>
+                <span class="text-xs font-medium block">Festivo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Season + Month -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1.5">Estación</label>
+              <select id="selSeason"
+                      class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 transition">
+                <option value="1">🌨 Invierno</option>
+                <option value="2">🌸 Primavera</option>
+                <option value="3" selected>☀️ Verano</option>
+                <option value="4">🍂 Otoño</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm font-medium text-slate-700 block mb-1.5">Mes</label>
+              <select id="selMonth"
+                      class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 transition">
+                <option value="1">Enero</option><option value="2">Febrero</option>
+                <option value="3">Marzo</option><option value="4">Abril</option>
+                <option value="5">Mayo</option><option value="6">Junio</option>
+                <option value="7" selected>Julio</option><option value="8">Agosto</option>
+                <option value="9">Septiembre</option><option value="10">Octubre</option>
+                <option value="11">Noviembre</option><option value="12">Diciembre</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Environmental vars -->
+        <div class="glass-card rounded-2xl p-6 space-y-5">
+          <div class="flex items-center gap-2 text-sky-600">
+            <i data-lucide="cloud" class="w-4 h-4"></i>
+            <h3 class="font-semibold text-sm">Variables Ambientales</h3>
+          </div>
+
+          <!-- Weather condition -->
+          <div>
+            <label class="text-sm font-medium text-slate-700 block mb-2">Condición Climática</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="wt-1" onclick="selectWeather(1)"
+                      class="weather-btn active border border-slate-200 rounded-xl p-2.5 flex items-center gap-2 text-slate-600">
+                <span class="text-lg">☀️</span>
+                <span class="text-xs font-medium">Despejado</span>
+              </button>
+              <button id="wt-2" onclick="selectWeather(2)"
+                      class="weather-btn border border-slate-200 rounded-xl p-2.5 flex items-center gap-2 text-slate-600">
+                <span class="text-lg">⛅</span>
+                <span class="text-xs font-medium">Nublado</span>
+              </button>
+              <button id="wt-3" onclick="selectWeather(3)"
+                      class="weather-btn border border-slate-200 rounded-xl p-2.5 flex items-center gap-2 text-slate-600">
+                <span class="text-lg">🌧</span>
+                <span class="text-xs font-medium">Lluvia ligera</span>
+              </button>
+              <button id="wt-4" onclick="selectWeather(4)"
+                      class="weather-btn border border-slate-200 rounded-xl p-2.5 flex items-center gap-2 text-slate-600">
+                <span class="text-lg">⛈</span>
+                <span class="text-xs font-medium">Lluvia intensa</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Temp -->
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <label class="text-sm font-medium text-slate-700">Temperatura</label>
+              <span id="tempVal" class="text-sm font-bold text-rose-500">20 °C</span>
+            </div>
+            <input id="sliderTemp" type="range" min="-8" max="41" value="20"
+                   class="w-full" oninput="document.getElementById('tempVal').textContent=this.value+' °C'">
+            <div class="flex justify-between text-xs text-slate-400 mt-1"><span>-8°C</span><span>41°C</span></div>
+          </div>
+
+          <!-- Humidity -->
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <label class="text-sm font-medium text-slate-700">Humedad relativa</label>
+              <span id="humVal" class="text-sm font-bold text-blue-500">65 %</span>
+            </div>
+            <input id="sliderHum" type="range" min="0" max="100" value="65"
+                   class="w-full" oninput="document.getElementById('humVal').textContent=this.value+' %'">
+            <div class="flex justify-between text-xs text-slate-400 mt-1"><span>0%</span><span>100%</span></div>
+          </div>
+
+          <!-- Wind -->
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <label class="text-sm font-medium text-slate-700">Velocidad del viento</label>
+              <span id="windVal" class="text-sm font-bold text-cyan-500">15 km/h</span>
+            </div>
+            <input id="sliderWind" type="range" min="0" max="100" value="15"
+                   class="w-full" oninput="document.getElementById('windVal').textContent=this.value+' km/h'">
+            <div class="flex justify-between text-xs text-slate-400 mt-1"><span>0 km/h</span><span>100 km/h</span></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Result card -->
+        <div class="flex flex-col gap-5">
+
+          <!-- Output card -->
+          <div id="resultCard" class="glass-card rounded-2xl p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                  <h3 class="font-semibold text-sm">Resultado de Predicción</h3>
+                </div>
+                <span id="demandBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full hidden">–</span>
+              </div>
+
+              <!-- Big number -->
+              <div class="text-center py-6">
+                <p class="text-xs text-slate-400 font-medium uppercase tracking-widest mb-2">Bicicletas proyectadas</p>
+                <p id="resultCnt" class="text-6xl font-black text-slate-900">–</p>
+                <p class="text-sm text-slate-400 mt-1">unidades / hora</p>
+              </div>
+
+              <!-- Breakdown -->
+              <div id="resultBreakdown" class="hidden space-y-2.5 mt-2">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="flex items-center gap-2 text-slate-500">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>Usuarios casuales
+                  </span>
+                  <span id="casualEst" class="font-bold text-amber-500">–</span>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                  <span class="flex items-center gap-2 text-slate-500">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>Usuarios registrados
+                  </span>
+                  <span id="registeredEst" class="font-bold text-emerald-600">–</span>
+                </div>
+                <!-- Mini progress -->
+                <div class="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden flex">
+                  <div id="casualMiniBar" class="h-full bg-amber-400 rounded-full transition-all duration-700" style="width:0%"></div>
+                  <div class="h-full bg-emerald-500 flex-1 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            <p id="resultPlaceholder" class="text-center text-slate-400 text-xs mt-4">
+              Presiona "Calcular Predicción" para ver el resultado.
+            </p>
+          </div>
+
+          <!-- Predict button -->
+          <button id="predictBtn" onclick="runPrediction()"
+                  class="w-full bg-gradient-to-r from-emerald-600 to-sky-500 hover:from-emerald-700 hover:to-sky-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 text-sm">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+            Calcular Predicción
+          </button>
+
+          <!-- Model metrics -->
+          <div id="modelMetrics" class="hidden glass-card rounded-2xl p-4">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Métricas del modelo</p>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p class="text-lg font-extrabold text-emerald-600" id="metR2">–</p>
+                <p class="text-xs text-slate-400">R²</p>
+              </div>
+              <div>
+                <p class="text-lg font-extrabold text-sky-500" id="metMAE">–</p>
+                <p class="text-xs text-slate-400">MAE</p>
+              </div>
+              <div>
+                <p class="text-lg font-extrabold text-violet-500" id="metRMSE">–</p>
+                <p class="text-xs text-slate-400">RMSE</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-400 py-4 border-t border-slate-200/60">
+      VeloPredict Analytics · Modelos y Simulación · Dataset: Bike Sharing (Kaggle)
+      &nbsp;·&nbsp;
+      <a href="/docs" target="_blank" class="hover:text-emerald-600 transition-colors underline underline-offset-2">API Docs</a>
+    </footer>
+
+  </main><!-- /main -->
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-white/70 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center mx-auto shadow-lg mb-4">
+        <i data-lucide="bike" class="w-7 h-7 text-white spinner"></i>
+      </div>
+      <p class="font-semibold text-slate-700">Entrenando modelo…</p>
+      <p class="text-xs text-slate-400 mt-1">RandomForest · 150 árboles · Esto toma unos segundos</p>
+    </div>
+  </div>
+
+  <!-- app.js -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

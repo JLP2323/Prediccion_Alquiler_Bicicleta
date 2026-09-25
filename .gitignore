@@ -1,0 +1,42 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Modelos entrenados (pesados - se regeneran con main..py)
+models/best_bike_model.pkl
+models/best_bike_model.h5
+models/preprocessor.pkl
+
+# Gráficos generados
+plots/
+
+# Logs
+logs/
+*.log
+
+# Datos sensibles / pesados
+# hour.csv  <-- descomenta si no quieres subir el dataset
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
