@@ -161,14 +161,6 @@ curl -X POST "http://127.0.0.1:8000/api/predict" \
 
 ---
 
-## 👥 Autores
-
-| Nombre |
-|---|
-| Eduardo Quinteros |
-| Julissa Lescano |
-| Dayannara |
-| Ledesma |
 
 ---
 
