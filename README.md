@@ -1,7 +1,7 @@
 ﻿# 🚲 VeloPredict Analytics — Predicción de Demanda de Bicicletas
 
 > Proyecto académico de Machine Learning con dashboard web interactivo.
-> **Autores:** Eduardo Quinteros · Julissa Lescano · Dayannara · Ledesma
+> **Autor:**  Julissa Lescano
 
 ---
 
