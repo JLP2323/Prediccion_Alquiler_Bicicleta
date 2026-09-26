@@ -1,26 +1,21 @@
-﻿# 🚲 VeloPredict Analytics — Predicción de Demanda de Bicicletas
-
+﻿#  VeloPredict Analytics — Predicción de Demanda de Bicicletas
 > Proyecto académico de Machine Learning con dashboard web interactivo.
 > **Autor:**  Julissa Lescano
 
----
-
-## 📋 Descripción
+##  Descripción
 
 **VeloPredict Analytics** predice la demanda horaria de bicicletas compartidas usando el dataset *Bike Sharing* (`hour.csv`) de Kaggle. El sistema combina un pipeline de Machine Learning (Random Forest, Gradient Boosting, Red Neuronal) con una **API REST en FastAPI** y un dashboard web interactivo.
 
 > *¿Cómo influyen las variables climáticas y de calendario en la demanda horaria de bicicletas?*
 
----
-
-## 🗂️ Estructura del repositorio
+##  Estructura del repositorio
 
 ```
 Prediccion_Alquiler_Bicicleta/
-├── app.py                    # 🌐 Backend FastAPI (VeloPredict API)
-├── main..py                  # 🤖 Pipeline ML completo (EDA, entrenamiento, evaluación)
-├── predict_interactive.py    # 💬 Predicción interactiva por consola
-├── hour.csv                  # 📊 Dataset (Bike Sharing - Kaggle)
+├── app.py                    # Backend FastAPI (VeloPredict API)
+├── main..py                  # Pipeline ML completo (EDA, entrenamiento, evaluación)
+├── predict_interactive.py    # Predicción interactiva por consola
+├── hour.csv                  # Dataset (Bike Sharing - Kaggle)
 ├── requirements.txt          # Dependencias ML (TensorFlow, sklearn, etc.)
 ├── requirements_web.txt      # Dependencias web (FastAPI, uvicorn)
 ├── templates/
@@ -32,9 +27,7 @@ Prediccion_Alquiler_Bicicleta/
 └── plots/                    # (generado) Gráficos EDA
 ```
 
----
-
-## 🛠️ Tecnologías
+## Tecnologías
 
 | Capa | Tecnología |
 |---|---|
@@ -44,9 +37,8 @@ Prediccion_Alquiler_Bicicleta/
 | Data | Pandas · NumPy |
 | Dataset | Bike Sharing Dataset (UCI / Kaggle) |
 
----
 
-## ⚙️ Instalación
+##  Instalación
 
 ### 1. Clonar el repositorio
 ```powershell
@@ -78,29 +70,28 @@ Descarga `hour.csv` desde [Kaggle - Bike Sharing Dataset](https://www.kaggle.com
 
 ---
 
-## 🚀 Ejecución
-
-### 🌐 App Web — Dashboard FastAPI
+##  Ejecución
+###  App Web — Dashboard FastAPI
 ```powershell
 & .\.venv\Scripts\Activate.ps1
 uvicorn app:app --reload --host 127.0.0.1 --port 8000
 ```
 Abre tu navegador en: **http://127.0.0.1:8000**
 
-### 🤖 Pipeline ML completo
+### Pipeline ML completo
 ```powershell
 python .\main..py
 ```
 Genera modelos en `models/` y gráficos en `plots/`.
 
-### 💬 Predicción interactiva por consola
+### Predicción interactiva por consola
 ```powershell
 python .\predict_interactive.py
 ```
 
 ---
 
-## 🔌 Endpoints de la API
+## Endpoints de la API
 
 | Endpoint | Método | Descripción |
 |---|---|---|
@@ -130,7 +121,7 @@ curl -X POST "http://127.0.0.1:8000/api/predict" \
 
 ---
 
-## 📊 Metodología ML
+## Metodología ML
 
 1. **EDA** — Estadísticos descriptivos, correlaciones, patrones temporales.
 2. **Feature Engineering** — Codificación cíclica de hora: `sin_hr = sin(2π·hr/24)`, `cos_hr = cos(2π·hr/24)`.
@@ -153,17 +144,9 @@ curl -X POST "http://127.0.0.1:8000/api/predict" \
 
 ---
 
-## 📦 Dataset
+##  Dataset
 
 - **Fuente:** [UCI / Kaggle — Bike Sharing Dataset](https://www.kaggle.com/datasets/lakshmi25npathi/bike-sharing-dataset)
 - **Archivo:** `hour.csv` — 17,379 registros horarios (2011–2012)
 - **Variable objetivo:** `cnt` (total de alquileres por hora)
 
----
-
-
----
-
-## 📄 Licencia
-
-Proyecto académico — uso educativo.
